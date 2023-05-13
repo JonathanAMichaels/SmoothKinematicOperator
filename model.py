@@ -54,7 +54,6 @@ def normalize_data(data, norm_values, forward=True):
 def preprocess_for_test(data, norm_values=[0, 1]):
     data = data.apply(pd.to_numeric, errors='coerce')
     total_groups = data.shape[1] // 4
-    # Create the index array with the desired pattern
     index_array = np.hstack([np.arange(i * 4, i * 4 + 3) for i in range(total_groups)])
     data.iloc[1:, index_array] = data.iloc[1:, index_array].interpolate()
     data.fillna(value=0, inplace=True)
