@@ -5,8 +5,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 
-# Preprocess the data
-def preprocess_data(data, norm_values=[0, 1], batch_size=64, duration=300):
+def preprocess_common(data):
     data = data.apply(pd.to_numeric, errors='coerce')
     total_groups = data.shape[1] // 4
     # Interpolate away NaNs so that the input to the RNN is sensible, but don't interpolate confidence
@@ -14,6 +13,10 @@ def preprocess_data(data, norm_values=[0, 1], batch_size=64, duration=300):
     data.iloc[1:, index_array] = data.iloc[1:, index_array].interpolate()
     # Instead, fill NaN confidence values with 0
     data.fillna(value=0, inplace=True)
+    return data
+
+
+def preprocess_data(data, norm_values=[0, 1], batch_size=64, duration=300):
     # create time slices from recording
     assert data.shape[0] > duration
     cropped_data = np.zeros((batch_size, duration, data.shape[1]), dtype=np.float32)
@@ -21,6 +24,14 @@ def preprocess_data(data, norm_values=[0, 1], batch_size=64, duration=300):
         t0 = np.random.randint(1, data.shape[0] - duration)
         cropped_data[b, :, :] = data.iloc[t0:t0 + duration, :].values
     normalized_data = normalize_data(cropped_data, norm_values)
+
+    return normalized_data
+
+
+
+def preprocess_for_test(data, norm_values=[0, 1]):
+    cropped_data = np.expand_dims(np.array(data.iloc[1:, :].values, dtype=np.float32), axis=0)
+    normalized_data = normalize_data(cropped_data, norm_values=norm_values)
 
     return normalized_data
 
@@ -50,17 +61,6 @@ def normalize_data(data, norm_values, forward=True):
 
     return normalized_data
 
-
-def preprocess_for_test(data, norm_values=[0, 1]):
-    data = data.apply(pd.to_numeric, errors='coerce')
-    total_groups = data.shape[1] // 4
-    index_array = np.hstack([np.arange(i * 4, i * 4 + 3) for i in range(total_groups)])
-    data.iloc[1:, index_array] = data.iloc[1:, index_array].interpolate()
-    data.fillna(value=0, inplace=True)
-    cropped_data = np.expand_dims(np.array(data.iloc[1:, :].values, dtype=np.float32), axis=0)
-    normalized_data = normalize_data(cropped_data, norm_values=norm_values)
-
-    return normalized_data
 
 # Create a custom dataset
 class CSVDataset(Dataset):
